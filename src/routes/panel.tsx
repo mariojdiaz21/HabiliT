@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { FilePlus2, Search, Trash2, PencilLine, Users, FileText } from "lucide-react";
 import { AppShell } from "@/components/habilit/AppShell";
 import { alumnosUnicos, useReportes } from "@/lib/reportes";
@@ -23,13 +24,41 @@ const ACCIONES = [
 ] as const;
 
 function Panel() {
-  const reportes = useReportes();
-  const alumnos = alumnosUnicos(reportes).length;
+  const navigate = useNavigate();
+  const [verificado, setVerificado] = useState(false);
+
+  // Validamos la sesión local al montar el componente
+  useEffect(() => {
+    const usuarioLogueado = localStorage.getItem("usuario") || localStorage.getItem("user");
+    if (!usuarioLogueado) {
+      navigate({ to: "/" });
+    } else {
+      setVerificado(true);
+    }
+  }, [navigate]);
+
+  // Manejo seguro de reportes por si la API aún no responde
+  let reportesList = [];
+  try {
+    const rawReportes = useReportes();
+    if (Array.isArray(rawReportes)) {
+      reportesList = rawReportes;
+    }
+  } catch (e) {
+    console.warn("No se pudieron cargar los reportes locales/remotos:", e);
+  }
+
+  const alumnos = alumnosUnicos(reportesList).length;
+
+  if (!verificado) {
+    return null;
+  }
+
   return (
     <AppShell title="Panel principal" subtitle="¿Qué desea hacer hoy?" back={false}>
       <div className="mb-8 grid gap-4 sm:grid-cols-2">
         <Stat icon={<Users className="h-6 w-6" />} label="Alumnos registrados" value={alumnos} bg="bg-cream" />
-        <Stat icon={<FileText className="h-6 w-6" />} label="Reportes totales" value={reportes.length} bg="bg-soft-green" />
+        <Stat icon={<FileText className="h-6 w-6" />} label="Reportes totales" value={reportesList.length} bg="bg-soft-green" />
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         {ACCIONES.map((a, i) => (

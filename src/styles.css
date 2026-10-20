@@ -137,3 +137,86 @@
   25% { transform: translateX(-8px); }
   75% { transform: translateX(8px); }
 }
+
+/*Estilos exportar informe*/
+
+@media print {
+  /* Configuración física de la hoja (Carta vertical) */
+  @page {
+    size: letter portrait;
+    margin: 0.8cm;
+  }
+
+  /* Reset global de fondos y texto */
+  html, body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-size: 9.5pt !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 1. Ocultar ABSOLUTAMENTE TODO en la página web por defecto */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* 2. Hacer visible ÚNICAMENTE el área del reporte de impresión y sus hijos */
+  .print-report-area,
+  .print-report-area * {
+    visibility: visible !important;
+  }
+
+  /* 3. Posicionar el área de impresión en la esquina superior absoluta de la hoja */
+  .print-report-area {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  /* 4. Ocultar explícitamente elementos no deseados con display:none */
+  .no-print,
+  header,
+  nav,
+  aside,
+  button,
+  a,
+  form {
+    display: none !important;
+  }
+
+  /* 5. Formato compacto para las tarjetas e información */
+  article, 
+  .print-card-container,
+  .bg-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    margin-bottom: 0.5rem !important;
+    padding: 0.6rem !important;
+    background: #ffffff !important;
+  }
+
+  /* 6. Escala óptima de los gráficos de Recharts (SVG/Canvas) */
+  svg, canvas {
+    max-height: 120px !important;
+    width: auto !important;
+    margin: 0 auto !important;
+  }
+
+  /* 7. Evitar saltos de página forzados que creen hojas en blanco extra */
+  article + article {
+    page-break-before: auto !important;
+    break-before: auto !important;
+    margin-top: 0.5rem !important;
+  }
+}

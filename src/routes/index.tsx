@@ -25,21 +25,30 @@ function Login() {
   const [intentos, setIntentos] = useState(0);
   const [shakeKey, setShakeKey] = useState(0);
 
-  const enviar = (e: React.FormEvent) => {
+  const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!usuario.trim() || !password) {
       setError("Ingrese su usuario y contraseña.");
       setShakeKey((k) => k + 1);
       return;
     }
-    const r = iniciarSesion(usuario, password);
-    if (r.ok) {
-      navigate({ to: "/panel" });
-    } else {
-      setIntentos((i) => i + 1);
-      setError(r.error === "usuario" ? "El usuario ingresado no existe. Verifique e intente de nuevo." : "La contraseña es incorrecta. Intente de nuevo.");
+
+    try {
+      // Llamamos a la función oficial de reportes.ts que conecta al backend y guarda la sesión
+      const r = await iniciarSesion(usuario, password);
+
+      if (r.ok) {
+        // Redirección directa y segura al panel principal
+        window.location.href = "/panel";
+      } else {
+        setIntentos((i) => i + 1);
+        setError("El usuario o la contraseña son incorrectos. Intente de nuevo.");
+        setShakeKey((k) => k + 1);
+        setPassword("");
+      }
+    } catch (err) {
+      setError("No se pudo conectar con el servidor. Verifique que el backend esté encendido.");
       setShakeKey((k) => k + 1);
-      if (r.error === "password") setPassword("");
     }
   };
 

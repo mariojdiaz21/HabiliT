@@ -1,9 +1,5 @@
 /**
- * Capa de datos de HabiliT.
- * Por ahora los reportes viven en un arreglo de JavaScript (memoria + copia en localStorage).
- * Cuando exista el backend en Python, reemplazar el cuerpo de cada función de "api"
- * por llamadas fetch() a los endpoints (p. ej. GET/POST/PUT/DELETE /api/reportes).
- * Las firmas (async, mismos tipos) ya están listas para ese cambio.
+ * Capa de datos de HabiliT conectada al Backend de FastAPI y MongoDB Atlas.
  */
 import { useSyncExternalStore } from "react";
 
@@ -39,93 +35,38 @@ export interface Reporte {
 
 export type ReporteInput = Omit<Reporte, "id" | "creadoEn" | "creadoPor">;
 
-const STORAGE_KEY = "habilit_reportes";
-
-// ---- Arreglo principal de reportes ----
-let reportes: Reporte[] = [
-  {
-    id: "r-1",
-    alumno: "Sofía Hernández López",
-    edad: 9,
-    fecha: "2026-09-15",
-    correoEncargado: "carla.lopez@correo.com",
-    telefonoEncargado: "5555-1234",
-    carnet: "HB-2026-001",
-    tutor: "Alma Orantes",
-    cursos: ["Matemáticas", "Terapia de Lenguaje"],
-    observaciones: "Muestra entusiasmo en actividades con material concreto.",
-    comentarios: "Mejoró su lectura de números de dos cifras.",
-    recomendaciones: "Practicar 10 minutos diarios con juegos de conteo en casa.",
-    criterios: { agilidad: 70, actitud: 90, participacion: 80, concentracion: 60, instrucciones: 75 },
-    creadoPor: "Alma Orantes",
-    creadoEn: "2026-09-15T15:00:00Z",
-  },
-  {
-    id: "r-2",
-    alumno: "Sofía Hernández López",
-    edad: 9,
-    fecha: "2026-10-06",
-    correoEncargado: "carla.lopez@correo.com",
-    telefonoEncargado: "5555-1234",
-    carnet: "HB-2026-001",
-    tutor: "Alma Orantes",
-    cursos: ["Matemáticas"],
-    observaciones: "Se concentra más tiempo que en la sesión anterior.",
-    comentarios: "Resolvió sumas con apoyo visual.",
-    recomendaciones: "Continuar con apoyo visual y reforzar restas.",
-    criterios: { agilidad: 78, actitud: 92, participacion: 85, concentracion: 72, instrucciones: 80 },
-    creadoPor: "Alma Orantes",
-    creadoEn: "2026-10-06T15:00:00Z",
-  },
-  {
-    id: "r-3",
-    alumno: "Diego Ramírez Castillo",
-    edad: 12,
-    fecha: "2026-10-02",
-    correoEncargado: "jorge.ramirez@correo.com",
-    telefonoEncargado: "5555-9876",
-    carnet: "HB-2026-014",
-    tutor: "Mario Díaz",
-    cursos: ["Terapia Musical", "Terapia Individual"],
-    observaciones: "Responde muy bien a ritmos y percusión.",
-    comentarios: "Se integró al grupo sin dificultad.",
-    recomendaciones: "Mantener rutina musical previa a tareas escolares.",
-    criterios: { agilidad: 65, actitud: 85, participacion: 70, concentracion: 68, instrucciones: 72 },
-    creadoPor: "Mario Díaz",
-    creadoEn: "2026-10-02T15:00:00Z",
-  },
-];
-
+const API_URL = "http://localhost:8000/api";
+//limpieza del buffer memoria caché
+let reportesCache: Reporte[] = [];
 const listeners = new Set<() => void>();
-let hydrated = false;
 
-function hydrate() {
-  if (hydrated || typeof window === "undefined") return;
-  hydrated = true;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) reportes = JSON.parse(raw);
-  } catch {
-    /* ignorar */
-  }
-}
-
-function commit(next: Reporte[]) {
-  reportes = next;
-  if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, JSON.stringify(reportes));
+function notifyListeners() {
   listeners.forEach((l) => l());
 }
 
+async function sincronizarReportes() {
+  try {
+    const res = await fetch(`${API_URL}/reportes`);
+    if (res.ok) {
+      reportesCache = await res.json();
+      notifyListeners();
+    }
+  } catch (error) {
+    console.error("Error al sincronizar reportes con el backend:", error);
+  }
+}
+
 function subscribe(l: () => void) {
-  hydrate();
   listeners.add(l);
-  l();
-  return () => listeners.delete(l);
+  sincronizarReportes(); // Carga inicial al suscribirse
+  return () => {
+    listeners.delete(l);
+  };
 }
 
 const SERVER_SNAPSHOT: Reporte[] = [];
 export function useReportes(): Reporte[] {
-  return useSyncExternalStore(subscribe, () => reportes, () => SERVER_SNAPSHOT);
+  return useSyncExternalStore(subscribe, () => reportesCache, () => SERVER_SNAPSHOT);
 }
 
 export function alumnosUnicos(lista: Reporte[]): string[] {
@@ -136,56 +77,83 @@ export function reportesDe(lista: Reporte[], alumno: string) {
   return lista.filter((r) => r.alumno === alumno).sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
-// ---- API (lista para reemplazarse por fetch al backend Python) ----
+// ---- API conectada a FastAPI y MongoDB Atlas ----
 export const api = {
   async listar(): Promise<Reporte[]> {
-    hydrate();
-    return reportes;
+    await sincronizarReportes();
+    return reportesCache;
   },
+  
   async obtener(id: string): Promise<Reporte | undefined> {
-    hydrate();
-    return reportes.find((r) => r.id === id);
+    await sincronizarReportes();
+    return reportesCache.find((r) => r.id === id);
   },
+  
   async crear(data: ReporteInput, usuario: string): Promise<Reporte> {
-    hydrate();
-    const nuevo: Reporte = {
-      ...data,
-      id: typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `r-${Date.now()}`,
-      creadoPor: usuario,
-      creadoEn: new Date().toISOString(),
-    };
-    commit([...reportes, nuevo]);
-    return nuevo;
+    const payload = { ...data, creadoPor: usuario };
+    const res = await fetch(`${API_URL}/reportes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    
+    if (!res.ok) throw new Error("Error al crear el reporte en el servidor");
+    const nuevoReporte: Reporte = await res.json();
+    await sincronizarReportes();
+    return nuevoReporte;
   },
+  
   async actualizar(id: string, data: ReporteInput): Promise<Reporte | undefined> {
-    hydrate();
-    let actualizado: Reporte | undefined;
-    commit(reportes.map((r) => (r.id === id ? (actualizado = { ...r, ...data }) : r)));
-    return actualizado;
+    const res = await fetch(`${API_URL}/reportes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    
+    if (!res.ok) throw new Error("Error al actualizar el reporte en el servidor");
+    const reporteActualizado: Reporte = await res.json();
+    await sincronizarReportes();
+    return reporteActualizado;
   },
+  
   async eliminar(id: string): Promise<void> {
-    hydrate();
-    commit(reportes.filter((r) => r.id !== id));
+    const res = await fetch(`${API_URL}/reportes/${id}`, {
+      method: "DELETE",
+    });
+    
+    if (!res.ok) throw new Error("Error al eliminar el reporte en el servidor");
+    await sincronizarReportes();
   },
 };
 
-// ---- Autenticación (temporal, en el navegador) ----
-const USUARIOS = [
-  { usuario: "Mario Díaz", password: "HabiliT567" },
-  { usuario: "Alma Orantes", password: "CentroHabilit891" },
-];
+// ---- Autenticación conectada al Backend de FastAPI ----
 const SESSION_KEY = "habilit_sesion";
-
-const normalizar = (s: string) => s.trim().replace(/\s+/g, " ").toLocaleLowerCase("es");
 
 export type LoginResultado = { ok: true; usuario: string } | { ok: false; error: "usuario" | "password" };
 
-export function iniciarSesion(usuario: string, password: string): LoginResultado {
-  const u = USUARIOS.find((x) => normalizar(x.usuario) === normalizar(usuario));
-  if (!u) return { ok: false, error: "usuario" };
-  if (u.password !== password) return { ok: false, error: "password" };
-  window.sessionStorage.setItem(SESSION_KEY, u.usuario);
-  return { ok: true, usuario: u.usuario };
+export async function iniciarSesion(usuario: string, password: string): Promise<LoginResultado> {
+  try {
+    const res = await fetch(`${API_URL}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, password }),
+    });
+    
+    if (!res.ok) return { ok: false, error: "usuario" };
+    const data = await res.json();
+    
+    if (!data.ok) {
+      return { ok: false, error: data.error };
+    }
+    
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(SESSION_KEY, data.usuario);
+    }
+    return { ok: true, usuario: data.usuario };
+  } catch (error) {
+    console.error("Error en la conexión de inicio de sesión:", error);
+    return { ok: false, error: "usuario" };
+  }
 }
 
 export function usuarioActual(): string | null {
@@ -194,7 +162,9 @@ export function usuarioActual(): string | null {
 }
 
 export function cerrarSesion() {
-  window.sessionStorage.removeItem(SESSION_KEY);
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(SESSION_KEY);
+  }
 }
 
 export function formatearFecha(f: string) {
