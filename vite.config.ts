@@ -2,16 +2,19 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
   tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
+    // Redirige la entrada del servidor
     server: { entry: "server" },
   },
+  // Forzar preset compatible con contenedores de Node/Bun (Render)
+  nitro: {
+    preset: "node-server",
+  },
   server: {
-    // Permite que Render y cualquier subdominio externo accedan al servidor en producción
+    // Permitir acceso desde los dominios de Render
     allowedHosts: [
-      'habilit.onrender.com',
-      '.onrender.com'
-    ]
+      "habilit.onrender.com",
+      ".onrender.com",
+    ],
   },
 });
 
