@@ -1,4 +1,4 @@
-# Logs
+# Logs y archivos temporales
 logs
 *.log
 npm-debug.log*
@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencias y compilación
 node_modules
 dist
 dist-ssr
@@ -15,6 +16,13 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+
+# Archivos de entorno y secretos (CRÍTICO)
+.env
+.env.local
+.env.*.local
+backend/.env
+**/backend/.env
 
 # Wrangler / Cloudflare
 .wrangler/
