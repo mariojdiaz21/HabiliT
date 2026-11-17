@@ -3,7 +3,7 @@
  */
 import { useSyncExternalStore } from "react";
 
-export const CURSOS = ["Matemáticas", "Terapia Musical", "Terapia de Lenguaje", "Terapia Individual"] as const;
+export const CURSOS = ["Matemáticas", "CyL", "Medio Social", "Medio natural", "Expresión Artística", "Educación Física", "Inglés", "Idioma Maya", "Computación", "Música", "Lectura", "Formación Ciudadana", "Emprendimiento", "Caligrafía", "Valores", "Contabilidad", "Química", "Biología", "FIFU", "Receso"] as const;
 export type Curso = (typeof CURSOS)[number];
 
 export const CRITERIOS = [
@@ -19,7 +19,11 @@ export interface Reporte {
   id: string;
   alumno: string;
   edad: number;
-  fecha: string; // YYYY-MM-DD
+  fecha: string;
+  institucion: string;
+  grado: string;
+  nombreEncargado: string;
+  parentescoEncargado: string;
   correoEncargado: string;
   telefonoEncargado: string;
   carnet: string;
@@ -36,7 +40,6 @@ export interface Reporte {
 export type ReporteInput = Omit<Reporte, "id" | "creadoEn" | "creadoPor">;
 
 const API_URL = "http://localhost:8000/api";
-//limpieza del buffer memoria caché
 let reportesCache: Reporte[] = [];
 const listeners = new Set<() => void>();
 
@@ -58,7 +61,7 @@ async function sincronizarReportes() {
 
 function subscribe(l: () => void) {
   listeners.add(l);
-  sincronizarReportes(); // Carga inicial al suscribirse
+  sincronizarReportes();
   return () => {
     listeners.delete(l);
   };
@@ -77,7 +80,6 @@ export function reportesDe(lista: Reporte[], alumno: string) {
   return lista.filter((r) => r.alumno === alumno).sort((a, b) => b.fecha.localeCompare(a.fecha));
 }
 
-// ---- API conectada a FastAPI y MongoDB Atlas ----
 export const api = {
   async listar(): Promise<Reporte[]> {
     await sincronizarReportes();
@@ -126,7 +128,6 @@ export const api = {
   },
 };
 
-// ---- Autenticación conectada al Backend de FastAPI ----
 const SESSION_KEY = "habilit_sesion";
 
 export type LoginResultado = { ok: true; usuario: string } | { ok: false; error: "usuario" | "password" };

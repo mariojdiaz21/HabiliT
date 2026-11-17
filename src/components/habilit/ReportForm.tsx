@@ -12,6 +12,10 @@ export const vacio = (): ReporteInput => ({
   alumno: "",
   edad: 0,
   fecha: hoy(),
+  institucion: "",
+  grado: "",
+  nombreEncargado: "",
+  parentescoEncargado: "",
   correoEncargado: "",
   telefonoEncargado: "",
   carnet: "",
@@ -28,6 +32,10 @@ const schema = z.object({
   alumno: z.string().trim().min(3, "Ingrese el nombre completo").max(120),
   edad: z.number({ invalid_type_error: "Ingrese la edad" }).int("Edad inválida").min(2, "Edad mínima 2").max(99, "Edad inválida"),
   fecha: z.string().min(1, "Seleccione la fecha"),
+  institucion: z.string().trim().min(2, "Ingrese la institución educativa").max(150),
+  grado: z.string().trim().min(1, "Ingrese el grado escolar").max(50),
+  nombreEncargado: z.string().trim().min(3, "Ingrese el nombre del encargado").max(120),
+  parentescoEncargado: z.string().trim().min(2, "Ingrese el parentesco").max(50),
   correoEncargado: z.string().trim().email("Correo electrónico inválido").max(255),
   telefonoEncargado: z
     .string()
@@ -42,7 +50,7 @@ const schema = z.object({
   criterios: z.object({ agilidad: pct, actitud: pct, participacion: pct, concentracion: pct, instrucciones: pct }),
 });
 
-type Errores = { [K in "alumno"|"edad"|"fecha"|"correoEncargado"|"telefonoEncargado"|"carnet"|"tutor"|"cursos"|"observaciones"|"comentarios"|"recomendaciones"|"criterios"]?: string | undefined };
+type Errores = { [K in "alumno" | "edad" | "fecha" | "institucion" | "grado" | "nombreEncargado" | "parentescoEncargado" | "correoEncargado" | "telefonoEncargado" | "carnet" | "tutor" | "cursos" | "observaciones" | "comentarios" | "recomendaciones" | "criterios"]?: string | undefined };
 
 export function ReportForm({
   initial,
@@ -99,6 +107,12 @@ export function ReportForm({
           <Campo label="Edad" error={errores.edad}>
             <input type="number" min={2} max={99} className={inp(errores.edad)} value={f.edad || ""} onChange={(e) => set("edad", e.target.valueAsNumber)} />
           </Campo>
+          <Campo label="Institución Educativa" error={errores.institucion} className="sm:col-span-2">
+            <input className={inp(errores.institucion)} value={f.institucion} onChange={(e) => set("institucion", e.target.value)} placeholder="Ej. Colegio Bilingüe El Roble" />
+          </Campo>
+          <Campo label="Grado" error={errores.grado}>
+            <input className={inp(errores.grado)} value={f.grado} onChange={(e) => set("grado", e.target.value)} placeholder="Ej. 4to Primaria" />
+          </Campo>
           <Campo label="Fecha" error={errores.fecha}>
             <input type="date" className={inp(errores.fecha)} value={f.fecha} onChange={(e) => set("fecha", e.target.value)} />
           </Campo>
@@ -106,7 +120,13 @@ export function ReportForm({
             <input className={inp(errores.carnet)} value={f.carnet} onChange={(e) => set("carnet", e.target.value)} placeholder="HB-2026-001" />
           </Campo>
           <Campo label="Nombre del tutor" error={errores.tutor}>
-            <input className={inp(errores.tutor)} value={f.tutor} onChange={(e) => set("tutor", e.target.value)} />
+            <input className={inp(errores.tutor)} value={f.tutor} onChange={(e) => set("tutor", e.target.value)} placeholder="Ej. Prof. Carlos Pérez" />
+          </Campo>
+          <Campo label="Nombre del encargado" error={errores.nombreEncargado}>
+            <input className={inp(errores.nombreEncargado)} value={f.nombreEncargado} onChange={(e) => set("nombreEncargado", e.target.value)} placeholder="Ej. María López" />
+          </Campo>
+          <Campo label="Parentesco del encargado" error={errores.parentescoEncargado}>
+            <input className={inp(errores.parentescoEncargado)} value={f.parentescoEncargado} onChange={(e) => set("parentescoEncargado", e.target.value)} placeholder="Ej. Madre" />
           </Campo>
           <Campo label="Correo electrónico del encargado" error={errores.correoEncargado}>
             <input type="email" className={inp(errores.correoEncargado)} value={f.correoEncargado} onChange={(e) => set("correoEncargado", e.target.value)} placeholder="encargado@correo.com" />
@@ -118,7 +138,8 @@ export function ReportForm({
       </Card>
 
       <Card>
-        <Titulo n={2} color="bg-lime">Cursos a asignar</Titulo>
+        <Titulo n={2} color="bg-lime">Cursos</Titulo>
+        <p className="mb-3 text-sm text-muted-foreground">Indique el curso que desea detallar </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {CURSOS.map((c) => {
             const on = f.cursos.includes(c);
@@ -183,7 +204,7 @@ export function ReportForm({
         <Btn type="button" variant="outline" onClick={onExit}>
           <LogOut className="h-4 w-4" /> Salir
         </Btn>
-        <Btn type="button" variant="gold" onClick={() => toast.info("La impresión en PDF estará disponible próximamente.")}>
+        <Btn type="button" variant="gold" onClick={() => toast.info("")}>
           <Printer className="h-4 w-4" /> Imprimir reporte
         </Btn>
         <Btn type="submit" disabled={guardando}>

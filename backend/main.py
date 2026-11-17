@@ -6,13 +6,13 @@ from typing import List, Optional, Dict
 from bson import ObjectId
 import os
 import re
+import certifi
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = FastAPI()
 
-# Configurar CORS para permitir que tu frontend en React se comunique con Python
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,19 +21,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Conexión a MongoDB Atlas
 MONGO_URI = os.getenv("MONGO_URI")
 if not MONGO_URI:
     raise RuntimeError("No se encontró la variable MONGO_URI en el archivo .env")
 
-client = AsyncIOMotorClient(MONGO_URI)
-db = client.habilit_db  # Base de datos
+client = AsyncIOMotorClient(MONGO_URI, tlsCAFile=certifi.where())
+db = client.habilit_db
 
-# ---- Modelos Pydantic ----
 class ReporteInput(BaseModel):
     alumno: str
     edad: int
     fecha: str
+    institucion: str = ""
+    grado: str = ""
+    nombreEncargado: str = ""
+    parentescoEncargado: str = ""
     correoEncargado: str
     telefonoEncargado: str
     carnet: str
@@ -55,8 +57,6 @@ class Reporte(ReporteInput):
 class LoginRequest(BaseModel):
     usuario: str
     password: str
-
-# ---- Rutas de la API ----
 
 @app.get("/")
 def inicio():
